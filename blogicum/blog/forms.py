@@ -1,7 +1,8 @@
+from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
-from django import forms
-from .models import Comment, Post, Category, Location
+
+from .models import Category, Comment, Post
 
 User = get_user_model()
 
@@ -9,7 +10,7 @@ User = get_user_model()
 class CommentForm(forms.ModelForm):
     class Meta:
         model = Comment
-        fields = ['text']
+        fields = ('text',)
         widgets = {
             'text': forms.Textarea(attrs={
                 'rows': 3,

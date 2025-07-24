@@ -17,6 +17,7 @@ from typing import (
 )
 
 import pytest
+import pytest
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.db.models import Model, Field

@@ -1,9 +1,9 @@
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
-from django.contrib.auth import get_user_model
 
-from core.models import PublishedModel, TitleModel, NameModel
 from core.constants import FIELD_LENGTHS
+from core.models import NameModel, PublishedModel, TitleModel
 
 User = get_user_model()
 
@@ -55,18 +55,18 @@ class Post(PublishedModel, TitleModel):
     )
     pub_date = models.DateTimeField(
         verbose_name='Дата и время публикации',
+        default=timezone.now,  # Добавьте значение по умолчанию
         help_text=(
             'Если установить дату и время в будущем — '
             'можно делать отложенные публикации.'
         )
     )
 
-    objects = models.Manager()
     image = models.ImageField(
+        'Изображение',
         upload_to='posts/',
         blank=True,
         null=True,
-        verbose_name='Изображение',
         help_text='Загрузите картинку'
     )
 
@@ -88,6 +88,8 @@ class Post(PublishedModel, TitleModel):
         null=True,
         verbose_name='Категория'
     )
+
+    objects = models.Manager()
 
     class Meta:
         verbose_name = 'публикация'
@@ -121,13 +123,15 @@ class Comment(PublishedModel):
         max_length=1000
     )
 
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+
     class Meta:
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
-        ordering = ('created_at',)  # Старые сверху, новые снизу
-        indexes = [
-            models.Index(fields=['created_at']),
-        ]
+        ordering = ('-created_at',)
 
     def __str__(self):
         return f'Комментарий {self.author} к посту #{self.post.id}'

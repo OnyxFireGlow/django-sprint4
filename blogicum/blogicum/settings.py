@@ -106,3 +106,5 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_REDIRECT_URL = 'blog:profile_redirect'
+
+LOGOUT_ALLOW_GET = True

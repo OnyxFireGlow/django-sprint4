@@ -1,20 +1,30 @@
-from django.utils import timezone
-from django.db.models import Count
-from django.contrib.auth.views import PasswordChangeView, \
-    PasswordChangeDoneView
-from django.views.generic import CreateView, UpdateView, DeleteView
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.core.paginator import Paginator
-from django.urls import reverse, reverse_lazy
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
-from django.http import Http404
-from django.shortcuts import get_object_or_404, render, redirect
-from .forms import CommentForm, SignUpForm, PostForm
-from .models import Category, Post, Comment
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.views import (
+    PasswordChangeView,
+    PasswordChangeDoneView,
+)
+from django.core.paginator import Paginator
+from django.db.models import Count
+from django.http import Http404, HttpResponseNotFound
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse, reverse_lazy
+from django.utils import timezone
+from django.views.generic import CreateView, DeleteView, UpdateView
+
 from .constants import POSTS_PER_PAGE
+from .forms import CommentForm, PostForm, SignUpForm
+from .models import Category, Comment, Post
+
+User = get_user_model()
+
+
+@login_required
+def profile_redirect(request):
+    """Перенаправление на профиль текущего пользователя"""
+    return redirect('blog:profile', username=request.user.username)
 
 
 def index(request):
@@ -25,11 +35,12 @@ def index(request):
     post_list = Post.objects.filter(
         is_published=True,
         pub_date__lte=now,
+        category__is_published=True
     ).annotate(
         comment_count=Count('comments')
     ).select_related(
         'category', 'location', 'author'
-    )
+    ).order_by('-pub_date',)
 
     # Пагинация
     paginator = Paginator(post_list, POSTS_PER_PAGE)
@@ -80,7 +91,7 @@ def category_posts(request, category_slug):
         category=category
     ).annotate(
         comment_count=Count('comments')
-    ).select_related('location', 'author')
+    ).select_related('location', 'author').order_by('-pub_date',)
 
     # Добавляем пагинацию
     paginator = Paginator(post_list, POSTS_PER_PAGE)
@@ -93,7 +104,46 @@ def category_posts(request, category_slug):
     }
     return render(request, 'blog/category.html', context)
 
-User = get_user_model()
+
+class PostCreateView(LoginRequiredMixin, CreateView):
+    model = Post
+    form_class = PostForm
+    template_name = 'blog/create.html'
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse('blog:profile', args=[self.request.user.username])
+
+
+class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Post
+    form_class = PostForm
+    template_name = 'blog/create.html'
+    pk_url_kwarg = 'post_id'
+
+    def test_func(self):
+        return self.get_object().author == self.request.user
+
+    def get_success_url(self):
+        return reverse('post_detail', args=[self.object.id])
+
+
+class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Post
+    template_name = 'blog/create.html'
+    success_url = reverse_lazy('blog:index')
+    pk_url_kwarg = 'post_id'
+
+    def test_func(self):
+        return self.get_object().author == self.request.user
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['post'] = self.object
+        return context
 
 
 @login_required
@@ -103,9 +153,9 @@ def profile(request, username):
     now = timezone.now()
 
     # Получаем все посты пользователя
-    post_list = post_list = Post.objects.filter(author=profile_user).annotate(
+    post_list = Post.objects.filter(author=profile_user).annotate(
         comment_count=Count('comments')
-    ).select_related('category', 'location')
+    ).select_related('category', 'location').order_by('-pub_date',)
 
     # Разделяем посты для автора и других пользователей
     if request.user == profile_user:
@@ -116,7 +166,7 @@ def profile(request, username):
         visible_posts = post_list.filter(
             is_published=True,
             pub_date__lte=now
-        )
+        ).order_by('-pub_date',)
 
     # Пагинация
     paginator = Paginator(visible_posts, POSTS_PER_PAGE)
@@ -126,7 +176,6 @@ def profile(request, username):
     context = {
         'profile': profile_user,
         'page_obj': page_obj,
-        'now': now  # Передаем текущее время для шаблона
     }
     return render(request, 'blog/profile.html', context)
 
@@ -149,18 +198,34 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
 
 @login_required
 def add_comment(request, post_id):
-    post = get_object_or_404(Post, id=post_id)
+    try:
+        post = get_object_or_404(
+            Post.objects.filter(
+                is_published=True,
+                pub_date__lte=timezone.now(),
+                category__is_published=True
+            ),
+            pk=post_id
+        )
+    except Http404:
+        return HttpResponseNotFound("Пост не найден или удален")
+
     if request.method == 'POST':
         form = CommentForm(request.POST)
         if form.is_valid():
             comment = form.save(commit=False)
-            comment.post = post
             comment.author = request.user
-            comment.save()
+            comment.post = post
+            comment.save()  # Важно: сохранить комментарий
             return redirect('blog:post_detail', post_id=post_id)
 
-    # Если форма не валидна, вернемся на страницу поста
-    return redirect('blog:post_detail', post_id=post_id)
+    # При невалидной форме возвращаем форму с ошибками
+    comments = post.comments.all().order_by('created_at')
+    return render(request, 'blog/detail.html', {
+        'post': post,
+        'comments': comments,
+        'form': form
+    })
 
 
 @login_required
@@ -202,50 +267,6 @@ class SignUpView(CreateView):
     success_url = reverse_lazy('login')
 
 
-class PostCreateView(LoginRequiredMixin, CreateView):
-    model = Post
-    form_class = PostForm
-    template_name = 'blog/create.html'
-
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse('blog:profile',
-                       args=[self.request.user.username])
-
-
-class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    model = Post
-    form_class = PostForm
-    template_name = 'blog/create.html'
-    pk_url_kwarg = 'post_id'
-
-    def test_func(self):
-        post = self.get_object()
-        return self.request.user == post.author
-
-    def get_success_url(self):
-        return reverse('post_detail', args=[self.object.id])
-
-
-class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
-    model = Post
-    template_name = 'blog/create.html'
-    success_url = reverse_lazy('blog:index')
-    pk_url_kwarg = 'post_id'
-
-    def test_func(self):
-        post = self.get_object()
-        return self.request.user == post.author
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['post'] = self.object
-        return context
-
-
 class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
     success_url = reverse_lazy('blog:password_change_done')
 
@@ -261,9 +282,3 @@ class CustomPasswordChangeDoneView(LoginRequiredMixin, PasswordChangeDoneView):
         context['title'] = 'Пароль успешно изменён'
         context['password_changed'] = True
         return context
-
-
-@login_required
-def profile_redirect(request):
-    """Перенаправление на профиль текущего пользователя"""
-    return redirect('blog:profile', username=request.user.username)
