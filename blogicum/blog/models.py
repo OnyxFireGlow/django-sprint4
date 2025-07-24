@@ -8,26 +8,6 @@ from core.constants import FIELD_LENGTHS
 User = get_user_model()
 
 
-class PublishedPostManager(models.Manager):
-    """
-    Кастомный менеджер для работы с опубликованными постами.
-
-    Предоставляет методы для получения только тех постов, которые:
-    - Имеют статус опубликовано (is_published=True)
-    - Имеют дату публикации не позже текущего времени
-    - Принадлежат опубликованной категории
-    """
-
-    def get_queryset(self):
-        """Возвращает базовый QuerySet с примененными фильтрами публикации."""
-        current_time = timezone.now()
-        return super().get_queryset().filter(
-            is_published=True,
-            pub_date__lte=current_time,
-            category__is_published=True
-        )
-
-
 class Category(PublishedModel, TitleModel):
     """Тематическая категория для публикаций."""
 
@@ -80,6 +60,16 @@ class Post(PublishedModel, TitleModel):
             'можно делать отложенные публикации.'
         )
     )
+
+    objects = models.Manager()
+    image = models.ImageField(
+        upload_to='posts/',
+        blank=True,
+        null=True,
+        verbose_name='Изображение',
+        help_text='Загрузите картинку'
+    )
+
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -99,12 +89,45 @@ class Post(PublishedModel, TitleModel):
         verbose_name='Категория'
     )
 
-    objects = models.Manager()  # Стандартный менеджер
-    '''Кастомный менеджер для опубликованных постов'''
-    published = PublishedPostManager()
-
     class Meta:
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
         ordering = ('-pub_date',)
         default_related_name = 'posts'
+
+    @property
+    def is_visible(self, user=None):
+        """Проверка видимости поста для пользователя"""
+        now = timezone.now()
+        if user == self.author:
+            return True
+        return self.is_published and self.pub_date <= now
+
+
+class Comment(PublishedModel):
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Публикация'
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Автор комментария'
+    )
+    text = models.TextField(
+        verbose_name='Текст комментария',
+        max_length=1000
+    )
+
+    class Meta:
+        verbose_name = 'комментарий'
+        verbose_name_plural = 'Комментарии'
+        ordering = ('created_at',)  # Старые сверху, новые снизу
+        indexes = [
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f'Комментарий {self.author} к посту #{self.post.id}'

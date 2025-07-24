@@ -6,14 +6,17 @@ SECRET_KEY = 'django-insecure-%9ah-kkm$&_)ugq5q_^p1+4=x0bacq-us4))hyljg(_e2yfda%
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+]
 
 INSTALLED_APPS = [
 
     'pages.apps.PagesConfig',
     'blog.apps.BlogConfig',
     'core.apps.CoreConfig',
+    'django_bootstrap5',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -63,6 +66,8 @@ DATABASES = {
     }
 }
 
+EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -87,6 +92,9 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 LANGUAGE_CODE = 'ru-RU'
 
 TIME_ZONE = 'Europe/Moscow'
@@ -95,5 +103,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGIN_REDIRECT_URL = 'blog:profile_redirect'
