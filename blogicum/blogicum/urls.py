@@ -11,13 +11,14 @@ urlpatterns = [
     path('', include('blog.urls')),
     path('pages/', include('pages.urls')),
     path('admin/', admin.site.urls),
-    path('login/', auth_views.LoginView.as_view(), name='login'),
-    path('auth/', include('django.contrib.auth.urls')),
+    path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
+    path('auth/logout/', views.custom_logout, name='logout'),
     path(
         'auth/registration/',
         views.SignUpView.as_view(),
         name='registration'
     ),
+    path('auth/', include('django.contrib.auth.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 handler404 = 'pages.views.page_not_found'
