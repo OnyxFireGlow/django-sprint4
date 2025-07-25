@@ -180,32 +180,30 @@ class PostDeleteView(BasePostAccessMixin, DeleteView):
         return context
 
 
-@login_required
 def profile(request, username):
-    """Отображает профиль пользователя с его постами."""
     profile_user = get_object_or_404(User, username=username)
     now = timezone.now()
 
     post_list = Post.objects.filter(author=profile_user).annotate(
         comment_count=Count('comments')
-    ).select_related('category', 'location').order_by('-pub_date')
+    ).order_by('-pub_date')
 
     if request.user != profile_user:
         post_list = post_list.filter(
             is_published=True,
-            pub_date__lte=now
+            pub_date__lte=now,
+            category__is_published=True
         )
 
     paginator = Paginator(post_list, POSTS_PER_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    return render(request, 'blog/profile.html', {
+    context = {
         'profile': profile_user,
         'page_obj': page_obj,
-        'first_name': profile_user.first_name or "",
-        'last_name': profile_user.last_name or "",
-    })
+    }
+    return render(request, 'blog/profile.html', context)
 
 
 class ProfileUpdateView(LoginRequiredMixin, UpdateView):

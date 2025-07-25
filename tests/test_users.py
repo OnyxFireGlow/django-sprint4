@@ -104,12 +104,6 @@ def test_profile(
         "Убедитесь, что при обращении к странице несуществующего "
         "пользователя возвращается статус 404."
     )
-
-    # Дополнительная диагностика: информация о тестовом пользователе
-    print(f"DEBUG: Testing profile for user: {user.username}")
-    print(f"DEBUG: User first_name: '{user.first_name}'")
-    print(f"DEBUG: User last_name: '{user.last_name}'")
-
     try:
         response = user_client.get("/profile/this_is_unexisting_user_name/")
     except User.DoesNotExist:
@@ -118,60 +112,27 @@ def test_profile(
     assert response.status_code == HTTPStatus.NOT_FOUND, (
         status_code_not_404_err_msg)
 
-    # Основной запрос к странице профиля
     user_response: HttpResponse = user_client.get(user_url)
-
-    # Проверка статуса ответа
-    if user_response.status_code != HTTPStatus.OK:
-        print(f"ERROR: Unexpected status code: {user_response.status_code}")
-        print(f"DEBUG: Response headers: {user_response.headers}")
-        print(f"DEBUG: Response content: {user_response.content[:500]}")
-
-    assert user_response.status_code == HTTPStatus.OK, (
-        f"Страница профиля вернула статус {user_response.status_code} вместо 200")
 
     user_content = user_response.content.decode("utf-8")
 
-    # Диагностика пустого контента
-    if not user_content:
-        print("ERROR: User profile content is empty!")
-
-        # Попробуем вызвать view напрямую для диагностики
-        from django.urls import reverse
-        from django.test import RequestFactory
-        from blog.views import profile
-
-        factory = RequestFactory()
-        request = factory.get(user_url)
-        request.user = user
-
-        try:
-            response = profile(request, user.username)
-            print(f"DEBUG: Direct view call status: {response.status_code}")
-            print(f"DEBUG: Direct view content: {response.content[:500]}")
-        except Exception as e:
-            print(f"ERROR in direct view call: {str(e)}")
-
-    # Получение контента для других пользователей
     anothers_same_page_response: HttpResponse = another_user_client.get(
-        user_url)
+        user_url
+    )
     anothers_same_page_content = anothers_same_page_response.content.decode(
-        "utf-8")
+        "utf-8"
+    )
 
     unlogged_same_page_response: HttpResponse = unlogged_client.get(user_url)
     unlogged_same_page_content = unlogged_same_page_response.content.decode(
-        "utf-8")
+        "utf-8"
+    )
 
     for profile_user, profile_user_content in (
             (user, user_content),
             (user, unlogged_same_page_content),
             (user, anothers_same_page_content),
     ):
-        # Пропускаем проверку если контент пустой
-        if not profile_user_content:
-            print("WARNING: Skipping content check for empty content")
-            continue
-
         _test_user_info_displayed(
             profile_user, profile_user_content, printed_url
         )
@@ -218,13 +179,6 @@ def test_profile(
 def _test_user_info_displayed(
         profile_user: Model, profile_user_content: str, printed_url: str
 ) -> None:
-    # Дополнительная диагностика
-    print(f"DEBUG: Testing user info for: {profile_user}")
-    print(f"DEBUG: First name: '{profile_user.first_name}'")
-    print(f"DEBUG: Last name: '{profile_user.last_name}'")
-    print(f"DEBUG: Content length: {len(profile_user_content)}")
-    print(f"DEBUG: Content snippet: {profile_user_content[:500]}")
-
     # Проверяем имя
     if profile_user.first_name:
         # Если имя указано, проверяем его наличие
