@@ -1,8 +1,10 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from core.constants import FIELD_LENGTHS
 from django.contrib.auth.forms import UserCreationForm
 
 from .models import Category, Comment, Post
+
 
 User = get_user_model()
 
@@ -13,7 +15,7 @@ class CommentForm(forms.ModelForm):
         fields = ('text',)
         widgets = {
             'text': forms.Textarea(attrs={
-                'rows': 3,
+                'rows': FIELD_LENGTHS['TEXT_AREA_ROWS'],
                 'placeholder': 'Оставьте ваш комментарий...',
                 'class': 'form-textarea'
             })
@@ -25,7 +27,7 @@ class CommentForm(forms.ModelForm):
 
 class SignUpForm(UserCreationForm):
     email = forms.EmailField(
-        max_length=254,
+        max_length=FIELD_LENGTHS['TITLE'],
         required=True,
         widget=forms.EmailInput(attrs={
             'placeholder': 'example@mail.com',
@@ -61,7 +63,7 @@ class SignUpForm(UserCreationForm):
 class PostForm(forms.ModelForm):
     class Meta:
         model = Post
-        fields = ['title', 'text', 'pub_date', 'location', 'category', 'image']
+        fields = ('title', 'text', 'pub_date', 'location', 'category', 'image')
         widgets = {
             'pub_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'title': forms.TextInput(attrs={'class': 'form-input'}),

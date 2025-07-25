@@ -16,5 +16,7 @@ title = models.CharField(max_length=FIELD_LENGTHS['TITLE'])
 FIELD_LENGTHS = {
     'TITLE': 256,
     'SHORT_DESCRIPTION': 500,
+    'TEXT_AREA': 1000,
     'SLUG': 100,
+    'TEXT_AREA_ROWS': 3
 }

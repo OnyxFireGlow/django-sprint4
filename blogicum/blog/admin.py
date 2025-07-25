@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Location, Post
+from .models import Category, Location, Post, Comment
 
 
 @admin.register(Category)
@@ -21,6 +21,24 @@ class CategoryAdmin(admin.ModelAdmin):
     search_fields = ('title', 'description')
     prepopulated_fields = {'slug': ('title',)}
     list_filter = ('is_published', 'created_at')
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ('author', 'post', 'created_at', 'is_published')
+    list_editable = ('is_published',)
+    search_fields = ('text', 'author__username', 'post__title')
+    list_filter = ('is_published', 'created_at')
+    raw_id_fields = ('author', 'post')
+
+    fieldsets = (
+        (None, {
+            'fields': ('post', 'author', 'text')
+        }),
+        ('Публикация', {
+            'fields': ('is_published',)
+        }),
+    )
 
 
 @admin.register(Location)

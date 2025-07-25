@@ -120,9 +120,8 @@ class Comment(PublishedModel):
     )
     text = models.TextField(
         verbose_name='Текст комментария',
-        max_length=1000
+        max_length=FIELD_LENGTHS['TEXT_AREA']
     )
-
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Дата создания'

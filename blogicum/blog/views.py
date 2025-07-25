@@ -2,8 +2,10 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.contrib.auth.views import (PasswordChangeView,
-                                       PasswordChangeDoneView)
+from django.contrib.auth.views import (
+    PasswordChangeView,
+    PasswordChangeDoneView,
+)
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.http import Http404
@@ -18,6 +20,12 @@ from .forms import CommentForm, PostForm, SignUpForm
 from .models import Category, Comment, Post
 
 User = get_user_model()
+
+
+def get_paginated_page(request, queryset, per_page=POSTS_PER_PAGE):
+    paginator = Paginator(queryset, per_page)
+    page_number = request.GET.get('page')
+    return paginator.get_page(page_number)
 
 
 class BasePostAccessMixin(UserPassesTestMixin):
@@ -65,9 +73,7 @@ def index(request):
         'category', 'location', 'author'
     ).order_by('-pub_date')
 
-    paginator = Paginator(post_list, POSTS_PER_PAGE)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_obj = get_paginated_page(request, post_list)
 
     return render(request, 'blog/index.html', {'page_obj': page_obj})
 
@@ -125,9 +131,7 @@ def category_posts(request, category_slug):
         comment_count=Count('comments')
     ).select_related('location', 'author').order_by('-pub_date')
 
-    paginator = Paginator(post_list, POSTS_PER_PAGE)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_obj = get_paginated_page(request, post_list)
 
     return render(request, 'blog/category.html', {
         'category': category,
@@ -195,9 +199,7 @@ def profile(request, username):
             category__is_published=True
         )
 
-    paginator = Paginator(post_list, POSTS_PER_PAGE)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_obj = get_paginated_page(request, post_list)
 
     context = {
         'profile': profile_user,
