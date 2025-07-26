@@ -1,7 +1,8 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from core.constants import FIELD_LENGTHS
 from django.contrib.auth.forms import UserCreationForm
+
+from core.constants import FIELD_LENGTHS
 
 from .models import Category, Comment, Post
 
@@ -15,7 +16,7 @@ class CommentForm(forms.ModelForm):
         fields = ('text',)
         widgets = {
             'text': forms.Textarea(attrs={
-                'rows': FIELD_LENGTHS['TEXT_AREA_ROWS'],
+                'rows': FIELD_LENGTHS['COMMENT_AREA_ROWS'],
                 'placeholder': 'Оставьте ваш комментарий...',
                 'class': 'form-textarea'
             })
@@ -65,10 +66,14 @@ class PostForm(forms.ModelForm):
         model = Post
         fields = ('title', 'text', 'pub_date', 'location', 'category', 'image')
         widgets = {
-            'pub_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'pub_date': forms.DateTimeInput(
+                format='%d.%m.%Y %H:%M',  # Формат "День.Месяц.Год Час:Минуты"
+                attrs={'class': 'form-input'}
+            ),
             'title': forms.TextInput(attrs={'class': 'form-input'}),
-            'text': forms.Textarea(attrs={'rows': 5,
-                                          'class': 'form-textarea'}),
+            'text': forms.Textarea(attrs={
+                'rows': FIELD_LENGTHS['POST_AREA_ROWS'],
+                'class': 'form-textarea'}),
         }
         labels = {
             'pub_date': 'Дата и время публикации',

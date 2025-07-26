@@ -62,10 +62,9 @@ def index(request):
 
     Использует пагинацию с количеством постов на странице из константы.
     """
-    now = timezone.now()
     post_list = Post.objects.filter(
         is_published=True,
-        pub_date__lte=now,
+        pub_date__lte=timezone.now(),
         category__is_published=True
     ).annotate(
         comment_count=Count('comments')
@@ -91,10 +90,9 @@ def post_detail(request, post_id):
         pk=post_id
     )
 
-    now = timezone.now()
     if not (request.user == post.author or (
         post.is_published
-        and post.pub_date <= now
+        and post.pub_date <= timezone.now()
         and (not post.category or post.category.is_published)
     )):
         raise Http404("Пост не доступен")
@@ -122,10 +120,9 @@ def category_posts(request, category_slug):
         is_published=True
     )
 
-    now = timezone.now()
     post_list = Post.objects.filter(
         is_published=True,
-        pub_date__lte=now,
+        pub_date__lte=timezone.now(),
         category=category
     ).annotate(
         comment_count=Count('comments')
@@ -186,7 +183,6 @@ class PostDeleteView(BasePostAccessMixin, DeleteView):
 
 def profile(request, username):
     profile_user = get_object_or_404(User, username=username)
-    now = timezone.now()
 
     post_list = Post.objects.filter(author=profile_user).annotate(
         comment_count=Count('comments')
@@ -195,7 +191,7 @@ def profile(request, username):
     if request.user != profile_user:
         post_list = post_list.filter(
             is_published=True,
-            pub_date__lte=now,
+            pub_date__lte=timezone.now(),
             category__is_published=True
         )
 
@@ -238,12 +234,11 @@ def add_comment(request, post_id):
     - Авторизацию пользователя
     """
     post = get_object_or_404(Post, pk=post_id)
-    now = timezone.now()
 
     # Проверка видимости поста для неавторов
     if request.user != post.author and (
         not post.is_published
-        or post.pub_date > now
+        or post.pub_date > timezone.now()
         or (post.category and not post.category.is_published)
     ):
         raise Http404("Пост не доступен")

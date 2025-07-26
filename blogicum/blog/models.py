@@ -55,7 +55,7 @@ class Post(PublishedModel, TitleModel):
     )
     pub_date = models.DateTimeField(
         verbose_name='Дата и время публикации',
-        default=timezone.now,  # Добавьте значение по умолчанию
+        default=timezone.now,
         help_text=(
             'Если установить дату и время в будущем — '
             'можно делать отложенные публикации.'
@@ -96,14 +96,6 @@ class Post(PublishedModel, TitleModel):
         verbose_name_plural = 'Публикации'
         ordering = ('-pub_date',)
         default_related_name = 'posts'
-
-    @property
-    def is_visible(self, user=None):
-        """Проверка видимости поста для пользователя"""
-        now = timezone.now()
-        if user == self.author:
-            return True
-        return self.is_published and self.pub_date <= now
 
 
 class Comment(PublishedModel):
